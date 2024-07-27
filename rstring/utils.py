@@ -9,7 +9,7 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-PRESETS_FILE = os.path.expanduser("~/.stringify.yaml")
+PRESETS_FILE = os.path.expanduser("~/.rstring.yaml")
 DEFAULT_PRESETS_FILE = os.path.join(os.path.dirname(__file__), 'default_presets.yaml')
 
 
