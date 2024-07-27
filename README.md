@@ -11,6 +11,16 @@ Stringify is a developer-friendly tool that uses rsync to gather and stringify c
 - File preview options
 - Summary view with file tree
 
+## Developers
+
+Create a venv and install dependencies:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+```
+
 ## Installation
 
 ```bash

@@ -1,9 +1,8 @@
-import json
 import subprocess
 from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
-
+import yaml
 from stringify import utils, cli
 
 
@@ -18,18 +17,18 @@ def temp_config(tmp_path):
 
 
 def test_load_presets(temp_config):
-    test_preset = {'test_preset': ['--include=*.py']}
-    temp_config.write_text(json.dumps(test_preset))
+    test_preset = {'test_preset': {'args': ['--include=*.py']}}
+    temp_config.write_text(yaml.dump(test_preset))
 
     presets = utils.load_presets()
     assert presets == test_preset
 
 
 def test_save_presets(temp_config):
-    test_preset = {'test_preset': ['--include=*.py']}
+    test_preset = {'test_preset': {'args': ['--include=*.py']}}
     utils.save_presets(test_preset)
 
-    saved_preset = json.loads(temp_config.read_text())
+    saved_preset = yaml.safe_load(temp_config.read_text())
     assert saved_preset == test_preset
 
 
@@ -39,8 +38,8 @@ def test_check_rsync():
         assert utils.check_rsync() == True
 
 
-def test_load_presets_invalid_json(temp_config):
-    temp_config.write_text('invalid json')
+def test_load_presets_invalid_yaml(temp_config):
+    temp_config.write_text('invalid: yaml: :]')
 
     presets = utils.load_presets()
     assert presets == {}
@@ -48,8 +47,17 @@ def test_load_presets_invalid_json(temp_config):
 
 def test_load_presets_file_not_found(temp_config):
     temp_config.unlink()
-    presets = utils.load_presets()
-    assert presets == {}
+    mock_default_content = yaml.dump({'default_preset': {'args': ['--include=*.py']}})
+
+    with patch('stringify.utils.PRESETS_FILE', 'nonexistent_file'):
+        with patch('stringify.utils.DEFAULT_PRESETS_FILE', 'default_presets.yaml'):
+            with patch('builtins.open', mock_open(read_data=mock_default_content)) as mock_file:
+                presets = utils.load_presets()
+
+                assert presets == {'default_preset': {'args': ['--include=*.py']}}
+                mock_file.assert_any_call('default_presets.yaml', 'r')
+                mock_file.assert_any_call('nonexistent_file', 'w')
+                mock_file().write.assert_called_once_with(mock_default_content)
 
 
 def test_run_rsync():
@@ -144,17 +152,19 @@ def test_print_tree(capsys):
 ])
 def test_copy_to_clipboard(system, command):
     test_text = "Test clipboard content"
+    file_list = ["file1.py"]
+    num_files = 1
     with patch('platform.system', return_value=system):
         with patch('subprocess.run') as mock_run:
-            utils.copy_to_clipboard(test_text, ["file1.py"])
+            utils.copy_to_clipboard(test_text, file_list, num_files)
             mock_run.assert_called_once()
             assert mock_run.call_args[0][0][0] == command
 
 
 def test_main(temp_config):
     test_args = ['stringify', '--preset', 'test_preset']
-    test_preset = {'test_preset': ['--include=*.py']}
-    temp_config.write_text(json.dumps(test_preset))
+    test_preset = {'test_preset': {'args': ['--include=*.py']}}
+    temp_config.write_text(yaml.dump(test_preset))
 
     mock_file_list = ['file1.py', 'file2.py', 'file3.py', 'file4.py', 'file5.py', 'file6.py', 'file7.py']
     mock_gathered_code = 'print("Hello")\n' * 26
@@ -166,4 +176,4 @@ def test_main(temp_config):
                     with patch('stringify.cli.copy_to_clipboard') as mock_copy:
                         cli.main()
                         mock_copy.assert_called_once()
-                        mock_copy.assert_called_with(mock_gathered_code, mock_file_list)
+                        mock_copy.assert_called_with(mock_gathered_code, mock_file_list, 7)

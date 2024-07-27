@@ -25,10 +25,15 @@ def load_presets():
             logger.error(f"Error reading {PRESETS_FILE}: {e}")
             print(f"Error reading {PRESETS_FILE}. Using empty presets.")
     else:
-        with open(DEFAULT_PRESETS_FILE, 'r') as df:
-            with open(PRESETS_FILE, 'w') as f:
-                f.write(df.read())
-                return yaml.safe_load(df)
+        try:
+            with open(DEFAULT_PRESETS_FILE, 'r') as df:
+                content = df.read()
+                with open(PRESETS_FILE, 'w') as f:
+                    f.write(content)
+                return yaml.safe_load(content) or {}
+        except Exception as e:
+            logger.error(f"Error reading or writing preset files: {e}")
+            print(f"Error with preset files. Using empty presets.")
     return {}
 
 

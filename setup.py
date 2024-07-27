@@ -35,7 +35,7 @@ setup(
         ],
     },
     install_requires=[
-        # Add any dependencies here
+        "pyyaml>=6.0.1",
     ],
     extras_require={
         'dev': ['pytest>=8.3.2'],
