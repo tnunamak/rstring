@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/tnunamak/rstring/compare/v0.1.0...v0.1.1) (2024-07-27)
+
+
+### Bug Fixes
+
+* package name ([b578bc1](https://github.com/tnunamak/rstring/commit/b578bc179334336e53c6551a9931c167db387cde))
+* release please configuration ([620a697](https://github.com/tnunamak/rstring/commit/620a6976b84c7269a797bca6ee09d6e2746c8354))
+
 ## 0.1.0 (2024-07-27)
 
 
