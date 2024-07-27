@@ -113,23 +113,29 @@ jobs:
           name: python-package-distributions
           path: dist/
       - name: Sign the dists with Sigstore
-        uses: sigstore/gh-action-sigstore-python@v2.1.3
+        uses: sigstore/gh-action-sigstore-python@v3.0.0
         with:
           inputs: >-
             ./dist/*.tar.gz
             ./dist/*.whl
-      - name: Create GitHub Release
+      - name: Create GitHub Release and Upload Artifacts
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: >-
-          gh release create
-          '${{ needs.release-please.outputs.tag_name }}'
-          --repo '${{ github.repository }}'
-          --notes ""
-      - name: Upload artifact signatures to GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: >-
-          gh release upload
-          '${{ needs.release-please.outputs.tag_name }}' dist/**
-          --repo '${{ github.repository }}'
+        run: |
+          set -e
+          echo "Creating GitHub release..."
+          gh release create '${{ needs.release-please.outputs.tag_name }}' \
+            --repo '${{ github.repository }}' \
+            --notes "Release ${{ needs.release-please.outputs.tag_name }}" \
+            || { echo "Failed to create release"; exit 1; }
+
+          echo "Uploading artifacts to release..."
+          gh release upload '${{ needs.release-please.outputs.tag_name }}' dist/** \
+            --repo '${{ github.repository }}' \
+            || { echo "Failed to upload artifacts"; exit 1; }
+
+          echo "Release creation and artifact upload completed successfully"
+
+      - name: Set job output
+        if: failure()
+        run: echo "release_failed=true" >> $GITHUB_OUTPUT

@@ -1,10 +1,10 @@
 {
   "packages": {
-    ".": {
-      "release-type": "python",
-      "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false,
+    "release-type": "python",
+    "bump-minor-pre-major": true,
+    "bump-patch-for-minor-pre-major": false,
+    "versioning": {
       "versioning-strategy": "always-bump-minor"
-    }
+    },
   }
 }
