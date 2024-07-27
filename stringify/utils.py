@@ -13,8 +13,15 @@ PRESETS_FILE = os.path.expanduser("~/.stringify.json")
 
 def load_presets():
     if os.path.exists(PRESETS_FILE):
-        with open(PRESETS_FILE, 'r') as f:
-            return json.load(f)
+        try:
+            with open(PRESETS_FILE, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            logger.error(f"Invalid JSON in {PRESETS_FILE}. Using empty presets.")
+            print(f"Warning: Invalid JSON in {PRESETS_FILE}. Using empty presets.")
+        except Exception as e:
+            logger.error(f"Error reading {PRESETS_FILE}: {e}")
+            print(f"Warning: Error reading {PRESETS_FILE}. Using empty presets.")
     return {}
 
 
@@ -74,7 +81,7 @@ def is_binary(file_path):
         return False
 
 
-def gather_code(file_list, preview_length=None):
+def gather_code(file_list, preview_length=None, include_dirs=False):
     result = ""
     for file_path in file_list:
         full_path = file_path
@@ -93,7 +100,7 @@ def gather_code(file_list, preview_length=None):
                         result += f"--- {file_path} ---\n\n"
             except Exception as e:
                 logger.error(f"Error reading {file_path}: {e}")
-        else:
+        elif include_dirs and os.path.isdir(full_path):
             result += f"--- {file_path} ---\n[Directory]\n\n"
     return result
 
@@ -137,7 +144,7 @@ def interactive_mode(initial_args):
     return args
 
 
-def print_tree(file_list):
+def print_tree(file_list, include_dirs=False):
     tree = {}
     for file_path in file_list:
         parts = file_path.split(os.sep)
@@ -146,7 +153,8 @@ def print_tree(file_list):
             if part not in current:
                 current[part] = {}
             current = current[part]
-        current[parts[-1]] = {}
+        if include_dirs or os.path.isfile(file_path):
+            current[parts[-1]] = {}
 
     def print_tree_recursive(node, prefix=""):
         items = list(node.items())
@@ -157,7 +165,7 @@ def print_tree(file_list):
             else:
                 print(f"{prefix}├── {name}")
                 new_prefix = prefix + "│   "
-            if subtree:
+            if subtree or (include_dirs and os.path.isdir(os.path.join(*node.keys(), name))):
                 print_tree_recursive(subtree, new_prefix)
 
     print_tree_recursive(tree)
