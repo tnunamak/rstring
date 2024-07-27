@@ -66,8 +66,7 @@ jobs:
         with:
           token: ${{ secrets.MY_RELEASE_PLEASE_TOKEN }}
           release-type: python
-          bump-minor-pre-major: true
-          bump-patch-for-minor-pre-major: false
+          config-file: release-please-config.json
 
   build-and-publish:
     needs: [test, release-please]
