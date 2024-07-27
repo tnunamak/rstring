@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.1](https://github.com/tnunamak/rstring/compare/v0.1.0...v0.1.1) (2024-07-27)
+## [0.2.0](https://github.com/tnunamak/rstring/compare/v0.1.0...v0.2.0) (2024-07-27)
 
 
 ### Bug Fixes
