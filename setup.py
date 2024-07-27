@@ -40,4 +40,8 @@ setup(
     extras_require={
         'dev': ['pytest>=8.3.2'],
     },
+    package_data={
+        "rstring": ["default_presets.yaml"],
+    },
+    include_package_data=True,
 )

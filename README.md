@@ -1,25 +1,14 @@
-# Rstring
+# Rstring: Rsync-Powered Code Stringification
 
-Rstring is a developer-friendly tool that uses [Rsync](https://linux.die.net/man/1/rsync) to gather and stringify code and other text from specified files and directories. It offers features like preset management, interactive mode, and easy clipboard integration.
+[![PyPI version](https://badge.fury.io/py/rstring.svg)](https://badge.fury.io/py/rstring)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+Rstring is a developer tool that uses Rsync to efficiently gather and stringify code from your projects. It's designed to streamline the process of preparing code context for AI programming assistants, making it easy to get intelligent insights about your codebase.
 
-- Use Rsync to efficiently filter files and gather their contents
-- Save and manage presets for quick access to common configurations
-- Interactive mode for fine-tuning file selection
-- Automatic clipboard copying (with option to disable)
-- File preview options
-- Summary view with file tree
-
-## Developers
-
-Create a venv and install dependencies:
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt -r requirements-dev.txt
-```
+<div align="center">
+  <img alt="Rstring demo" src="https://github.com/user-attachments/assets/c85106e3-2b02-42ff-b585-4234a58e8b9a" width="600">
+  <p><i>Quickly prompt an LLM with your whole project!</i></p>
+</div>
 
 ## Installation
 
@@ -27,41 +16,93 @@ pip install -r requirements.txt -r requirements-dev.txt
 pip install rstring
 ```
 
-## Usage
+## Quick Start
 
 Basic usage:
-
 ```bash
-rstring [rsync_options]
+rstring
 ```
 
-For more options:
-
+Get help:
 ```bash
 rstring --help
 ```
 
-## Examples
+Use a specific preset:
+```bash
+rstring --preset my_preset
+```
 
-1. Stringify all Python files in the current directory:
-   ```bash
-   rstring --include="*.py" --exclude="*" .
+Get a tree view of selected files:
+```bash
+rstring --summary
+```
+
+## Advanced Usage
+
+### Custom Presets
+
+Save a new preset:
+```bash
+rstring --save-preset "frontend" "--include=*.js --include=*.css --exclude=node_modules"
+```
+
+### File Preview
+
+Limit output to first N lines of each file:
+```bash
+rstring --preview-length=10
+```
+
+
+### Gitignore Integration
+
+By default, Rstring automatically excludes .gitignore patterns. To ignore .gitignore:
+```bash
+rstring --no-gitignore
+```
+
+### Interactive mode:
+
+Enter interactive mode to continuously preview and select matched files:
+```bash
+rstring -i
+```
+
+## Understanding Rstring
+
+1. **Rsync Usage**: Rstring uses Rsync to efficiently select files based on include/exclude patterns.
+
+2. **Preset System**: The default configuration file is at `~/.rstring.yaml`. The 'common' preset is used by default and includes sensible exclusions for most projects.
+
+3. **Output Format**:
    ```
-   
-2. Stringify a Next.js project and save a preset:
-   ```bash
-   rstring  --save-as-preset="nextjs" --include="*.js" --include="*.jsx" --include="*.ts" --include="*.tsx" \
-   --exclude="node_modules" --exclude=".next" --exclude=".vercel" \
-   --exclude=".git" --exclude=".vscode" --exclude=".idea" --exclude=".DS_Store" \
-   --exclude="*.log"
+   --- path/to/file1.py ---
+   [File contents]
+
+   --- path/to/file2.js ---
+   [File contents]
    ```
 
-3. Use a saved preset:
-   ```bash
-   rstring -p my_preset
-   ```
+4. **Binary Files**: Content of binary files is represented as a hexdump preview.
 
-4. Enter interactive mode:
-   ```bash
-   rstring -i
-   ```
+5. **Clipboard Integration**: Output is automatically copied to clipboard unless disabled with `--no-clipboard`.
+
+## Pro Tips
+
+1. **Explore the default preset**: Check `~/.rstring.yaml` to see how the 'common' preset works.
+
+2. **Customize for your project**: Create a project-specific preset for quick context gathering.
+
+3. **Use with AI tools**: Rstring is great for preparing code context for AI programming assistants.
+
+4. **Large projects may produce substantial output**: Use `--preview-length` or specific patterns for better manageability.
+
+## Support and Contributing
+
+- Issues and feature requests: [GitHub Issues](https://github.com/tnunamak/rstring/issues)
+- Contributions: Pull requests are welcome!
+
+## License
+
+Rstring is released under the MIT License. See the [LICENSE](LICENSE) file for details.
