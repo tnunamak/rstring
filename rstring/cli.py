@@ -17,7 +17,6 @@ def main():
         print("Error: rsync is not installed on this system. Please install rsync and try again.")
         return
 
-    # Use allow_abbrev=False because rsync options can look like abbreviated stringify options
     parser = argparse.ArgumentParser(description="Stringify code with rsync and manage presets.", allow_abbrev=False)
     parser.add_argument("-p", "--preset", help="Use a saved preset")
     parser.add_argument("-sp", "--save-preset", nargs=2, metavar=("NAME", "ARGS"), help="Save a new preset")

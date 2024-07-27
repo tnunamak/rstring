@@ -3,14 +3,14 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 import yaml
-from stringify import utils, cli
+from rstring import utils, cli
 
 
 @pytest.fixture
 def temp_config(tmp_path):
-    config_file = tmp_path / '.stringify.yaml'
+    config_file = tmp_path / '.rstring.yaml'
     config_file.touch()
-    with patch('stringify.utils.PRESETS_FILE', str(config_file)):
+    with patch('rstring.utils.PRESETS_FILE', str(config_file)):
         yield config_file
     if config_file.exists():
         config_file.unlink()
@@ -49,8 +49,8 @@ def test_load_presets_file_not_found(temp_config):
     temp_config.unlink()
     mock_default_content = yaml.dump({'default_preset': {'args': ['--include=*.py']}})
 
-    with patch('stringify.utils.PRESETS_FILE', 'nonexistent_file'):
-        with patch('stringify.utils.DEFAULT_PRESETS_FILE', 'default_presets.yaml'):
+    with patch('rstring.utils.PRESETS_FILE', 'nonexistent_file'):
+        with patch('rstring.utils.DEFAULT_PRESETS_FILE', 'default_presets.yaml'):
             with patch('builtins.open', mock_open(read_data=mock_default_content)) as mock_file:
                 presets = utils.load_presets()
 
@@ -79,7 +79,7 @@ def test_run_rsync():
 
 
 def test_validate_rsync_args():
-    with patch('stringify.utils.run_rsync') as mock_run_rsync:
+    with patch('rstring.utils.run_rsync') as mock_run_rsync:
         mock_run_rsync.return_value = ["file1.py", "file2.py"]
         assert utils.validate_rsync_args(["--include=*.py", "."]) == True
 
@@ -107,7 +107,7 @@ def test_gather_code():
         return mock_open(read_data=file_contents[filename])()
 
     with patch('builtins.open', side_effect=mock_open_file):
-        with patch('stringify.utils.is_binary', return_value=False):
+        with patch('rstring.utils.is_binary', return_value=False):
             with patch('os.path.isfile', return_value=True):
                 result = utils.gather_code(file_list)
                 assert "--- /path/to/file1.py ---" in result
@@ -119,8 +119,8 @@ def test_gather_code():
 def test_interactive_mode():
     with patch('builtins.input') as mock_input:
         mock_input.side_effect = ['a', '*.txt', 'd']
-        with patch('stringify.utils.validate_rsync_args', return_value=True):
-            with patch('stringify.utils.run_rsync', return_value=['file1.txt']):
+        with patch('rstring.utils.validate_rsync_args', return_value=True):
+            with patch('rstring.utils.run_rsync', return_value=['file1.txt']):
                 result = utils.interactive_mode(['--include=*.py'])
                 assert result == ['--include=*.py', '--include', '*.txt']
 
@@ -162,7 +162,7 @@ def test_copy_to_clipboard(system, command):
 
 
 def test_main(temp_config):
-    test_args = ['stringify', '--preset', 'test_preset']
+    test_args = ['rstring', '--preset', 'test_preset']
     test_preset = {'test_preset': {'args': ['--include=*.py']}}
     temp_config.write_text(yaml.dump(test_preset))
 
@@ -170,10 +170,10 @@ def test_main(temp_config):
     mock_gathered_code = 'print("Hello")\n' * 26
 
     with patch('sys.argv', test_args):
-        with patch('stringify.utils.check_rsync', return_value=True):
-            with patch('stringify.cli.run_rsync', return_value=mock_file_list):
-                with patch('stringify.cli.gather_code', return_value=mock_gathered_code):
-                    with patch('stringify.cli.copy_to_clipboard') as mock_copy:
+        with patch('rstring.utils.check_rsync', return_value=True):
+            with patch('rstring.cli.run_rsync', return_value=mock_file_list):
+                with patch('rstring.cli.gather_code', return_value=mock_gathered_code):
+                    with patch('rstring.cli.copy_to_clipboard') as mock_copy:
                         cli.main()
                         mock_copy.assert_called_once()
                         mock_copy.assert_called_with(mock_gathered_code, mock_file_list, 7)
