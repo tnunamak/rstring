@@ -37,4 +37,7 @@ setup(
     install_requires=[
         # Add any dependencies here
     ],
+    extras_require={
+        'dev': ['pytest>=8.3.2'],
+    },
 )

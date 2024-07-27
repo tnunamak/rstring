@@ -1,33 +1,80 @@
 import binascii
-import json
 import logging
 import os
 import platform
 import shlex
 import subprocess
 
+import yaml
+
 logger = logging.getLogger(__name__)
 
-PRESETS_FILE = os.path.expanduser("~/.stringify.json")
+PRESETS_FILE = os.path.expanduser("~/.stringify.yaml")
+DEFAULT_PRESETS_FILE = os.path.join(os.path.dirname(__file__), 'default_presets.yaml')
 
 
 def load_presets():
     if os.path.exists(PRESETS_FILE):
         try:
             with open(PRESETS_FILE, 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            logger.error(f"Invalid JSON in {PRESETS_FILE}. Using empty presets.")
-            print(f"Warning: Invalid JSON in {PRESETS_FILE}. Using empty presets.")
+                return yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            logger.error(f"Error parsing {PRESETS_FILE}: {e}")
+            print(f"Error parsing {PRESETS_FILE}. Using empty presets.")
         except Exception as e:
             logger.error(f"Error reading {PRESETS_FILE}: {e}")
-            print(f"Warning: Error reading {PRESETS_FILE}. Using empty presets.")
+            print(f"Error reading {PRESETS_FILE}. Using empty presets.")
+    else:
+        with open(DEFAULT_PRESETS_FILE, 'r') as df:
+            with open(PRESETS_FILE, 'w') as f:
+                f.write(df.read())
+                return yaml.safe_load(df)
     return {}
 
 
 def save_presets(presets):
     with open(PRESETS_FILE, 'w') as f:
-        json.dump(presets, f, indent=2)
+        yaml.dump(presets, f)
+
+
+def get_default_preset(presets):
+    for name, preset in presets.items():
+        if preset.get('is_default', False):
+            return name
+    return None
+
+
+def set_default_preset(presets, preset_name):
+    if preset_name not in presets:
+        print(f"Error: Preset '{preset_name}' not found")
+        return
+
+    for name, preset in presets.items():
+        preset['is_default'] = (name == preset_name)
+
+    save_presets(presets)
+    print(f"Default preset set to '{preset_name}'")
+
+
+def parse_gitignore(gitignore_path):
+    if not os.path.exists(gitignore_path):
+        return []
+
+    with open(gitignore_path, 'r') as f:
+        lines = f.readlines()
+
+    gitignore_patterns = ['--exclude=.git']
+    for line in lines:
+        line = line.strip()
+        if line and not line.startswith('#'):
+            if line.startswith('/'):
+                line = line[1:]
+            if line.endswith('/'):
+                gitignore_patterns.append(f"--exclude={line}*")
+            else:
+                gitignore_patterns.append(f"--exclude={line}")
+
+    return gitignore_patterns
 
 
 def check_rsync():
@@ -105,7 +152,7 @@ def gather_code(file_list, preview_length=None, include_dirs=False):
     return result
 
 
-def interactive_mode(initial_args):
+def interactive_mode(initial_args, include_dirs=False):
     args = initial_args.copy()
     while True:
         print(args)
@@ -115,9 +162,7 @@ def interactive_mode(initial_args):
 
         file_list = run_rsync(args)
         print("\nCurrent file list:")
-        for file in file_list:
-            if os.path.isfile(file):
-                print(file)
+        print_tree(file_list, include_dirs=include_dirs)
         print(f"\nCurrent rsync arguments: {' '.join(args)}")
 
         action = input("\nEnter an action (a)dd/(r)emove/(e)dit/(d)one: ").lower()
@@ -171,7 +216,7 @@ def print_tree(file_list, include_dirs=False):
     print_tree_recursive(tree)
 
 
-def copy_to_clipboard(text, file_list):
+def copy_to_clipboard(text, file_list, num_files):
     system = platform.system()
     try:
         if system == 'Darwin':  # macOS
@@ -183,6 +228,6 @@ def copy_to_clipboard(text, file_list):
                 subprocess.run(['xclip', '-selection', 'clipboard'], input=text.encode('utf-8'), check=True)
             except FileNotFoundError:
                 subprocess.run(['xsel', '--clipboard', '--input'], input=text.encode('utf-8'), check=True)
-        print(f"Copied {len(text.splitlines())} lines from {len(file_list)} files to clipboard.")
+        print(f"Copied {len(text.splitlines())} lines from {num_files} files to clipboard.")
     except Exception as e:
         print(f"Failed to copy to clipboard: {e}")
