@@ -35,6 +35,7 @@ setup(
         ],
     },
     install_requires=[
+        "colorama>=0.4.6",
         "pyyaml>=6.0.1",
     ],
     extras_require={
