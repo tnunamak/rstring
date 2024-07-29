@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/tnunamak/rstring/compare/v0.2.0...v0.3.0) (2024-07-29)
+
+
+### Features
+
+* UX improvements ([b331736](https://github.com/tnunamak/rstring/commit/b331736de7c0cc75943200db0b49f321be31af4e))
+
+
+### Bug Fixes
+
+* GitHub release job ([c36207c](https://github.com/tnunamak/rstring/commit/c36207c9b067949207fecbbd806ac0c7203833a2))
+
+
+### Documentation
+
+* pipx ([0ff05a6](https://github.com/tnunamak/rstring/commit/0ff05a67007feb0f0093e3dc89d4056e7718277b))
+
 ## [0.2.0](https://github.com/tnunamak/rstring/compare/v0.1.0...v0.2.0) (2024-07-27)
 
 
