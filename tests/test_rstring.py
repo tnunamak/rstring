@@ -3,6 +3,7 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 import yaml
+
 from rstring import utils, cli
 
 
@@ -125,24 +126,33 @@ def test_interactive_mode():
                 assert result == ['--include=*.py', '--include', '*.txt']
 
 
-def test_print_tree(capsys):
+def test_print_tree():
     file_list = ['dir1/file1.py', 'dir1/dir2/file2.py', 'file3.py']
+
+    def mock_isdir(path):
+        path = path[2:] if path.startswith('./') else path
+        return path in ['', 'dir1', 'dir1/dir2'] or path.replace('\\', '/') in ['', 'dir1', 'dir1/dir2']
 
     def mock_isfile(path):
         return path in file_list or path.replace('\\', '/') in file_list
 
-    with patch('os.path.isfile', side_effect=mock_isfile):
-        utils.print_tree(file_list)
+    def mock_abspath(path):
+        return '/tests' if path == '.' else f"/tests/{path}"
 
-    captured = capsys.readouterr()
+    with patch('os.path.isdir', side_effect=mock_isdir):
+        with patch('os.path.isfile', side_effect=mock_isfile):
+            with patch('os.path.abspath', side_effect=mock_abspath):
+                output = utils.get_tree_string(file_list, include_dirs=False, use_color=False)
+
     expected_output = (
+        "tests\n"
         "├── dir1\n"
-        "│   ├── file1.py\n"
-        "│   └── dir2\n"
-        "│       └── file2.py\n"
-        "└── file3.py\n"
+        "│   ├── dir2\n"
+        "│   │   └── file2.py\n"
+        "│   └── file1.py\n"
+        "└── file3.py"
     )
-    assert captured.out.strip() == expected_output.strip()
+    assert output.strip() == expected_output.strip()
 
 
 @pytest.mark.parametrize("system, command", [
@@ -152,11 +162,9 @@ def test_print_tree(capsys):
 ])
 def test_copy_to_clipboard(system, command):
     test_text = "Test clipboard content"
-    file_list = ["file1.py"]
-    num_files = 1
     with patch('platform.system', return_value=system):
         with patch('subprocess.run') as mock_run:
-            utils.copy_to_clipboard(test_text, file_list, num_files)
+            utils.copy_to_clipboard(test_text)
             mock_run.assert_called_once()
             assert mock_run.call_args[0][0][0] == command
 
@@ -166,14 +174,12 @@ def test_main(temp_config):
     test_preset = {'test_preset': {'args': ['--include=*.py']}}
     temp_config.write_text(yaml.dump(test_preset))
 
-    mock_file_list = ['file1.py', 'file2.py', 'file3.py', 'file4.py', 'file5.py', 'file6.py', 'file7.py']
     mock_gathered_code = 'print("Hello")\n' * 26
 
     with patch('sys.argv', test_args):
         with patch('rstring.utils.check_rsync', return_value=True):
-            with patch('rstring.cli.run_rsync', return_value=mock_file_list):
-                with patch('rstring.cli.gather_code', return_value=mock_gathered_code):
-                    with patch('rstring.cli.copy_to_clipboard') as mock_copy:
-                        cli.main()
-                        mock_copy.assert_called_once()
-                        mock_copy.assert_called_with(mock_gathered_code, mock_file_list, 7)
+            with patch('rstring.cli.gather_code', return_value=mock_gathered_code):
+                with patch('rstring.cli.copy_to_clipboard') as mock_copy:
+                    cli.main()
+                    mock_copy.assert_called_once()
+                    mock_copy.assert_called_with(mock_gathered_code)

@@ -20,8 +20,13 @@ pip install rstring
 
 Basic usage:
 ```bash
-rstring
+rstring  # Use the default preset
 ```
+
+```bash
+rstring --include=*/ --include=*.py --exclude=* # traverse all dirs, include .py files, exclude everything else
+```
+
 
 Get help:
 ```bash
@@ -42,9 +47,10 @@ rstring --summary
 
 ### Custom Presets
 
-Save a new preset:
+Create a new preset:
 ```bash
-rstring --save-preset "frontend" "--include=*.js --include=*.css --exclude=node_modules"
+rstring --save-preset python --include=*/ --include=*.py --exclude=*  # save it
+rstring --preset python  # use it
 ```
 
 ### File Preview

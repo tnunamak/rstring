@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 PRESETS_FILE = os.path.expanduser("~/.rstring.yaml")
 DEFAULT_PRESETS_FILE = os.path.join(os.path.dirname(__file__), 'default_presets.yaml')
 
+from .tree import get_tree_string
+
 
 def load_presets():
     if os.path.exists(PRESETS_FILE):
@@ -134,6 +136,7 @@ def is_binary(file_path):
 
 
 def gather_code(file_list, preview_length=None, include_dirs=False):
+    template = "--- {} ---\n{}\n\n"
     result = ""
     for file_path in file_list:
         full_path = file_path
@@ -147,14 +150,17 @@ def gather_code(file_list, preview_length=None, include_dirs=False):
                         file_data = file_content.read().decode('utf-8', errors='ignore')
                         file_data = '\n'.join(file_data.splitlines()[:preview_length])
                     if preview_length is None or preview_length > 0:
-                        result += f"--- {file_path} ---\n{file_data}\n\n"
+                        # result += f"--- {file_path} ---\n{file_data}\n\n"
+                        result += template.format(file_path, file_data)
                     else:
-                        result += f"--- {file_path} ---\n\n"
+                        # result += f"--- {file_path} ---\n\n"
+                        result += template.format(file_path, "")
             except Exception as e:
                 logger.error(f"Error reading {file_path}: {e}")
         elif include_dirs and os.path.isdir(full_path):
-            result += f"--- {file_path} ---\n[Directory]\n\n"
-    return result
+            # result += f"--- {file_path} ---\n[Directory]\n\n"
+            result += template.format(file_path, "[Directory]")
+    return result[:-2]
 
 
 def interactive_mode(initial_args, include_dirs=False):
@@ -167,7 +173,7 @@ def interactive_mode(initial_args, include_dirs=False):
 
         file_list = run_rsync(args)
         print("\nCurrent file list:")
-        print_tree(file_list, include_dirs=include_dirs)
+        print(get_tree_string(file_list, include_dirs=include_dirs))
         print(f"\nCurrent rsync arguments: {' '.join(args)}")
 
         action = input("\nEnter an action (a)dd/(r)emove/(e)dit/(d)one: ").lower()
@@ -194,34 +200,7 @@ def interactive_mode(initial_args, include_dirs=False):
     return args
 
 
-def print_tree(file_list, include_dirs=False):
-    tree = {}
-    for file_path in file_list:
-        parts = file_path.split(os.sep)
-        current = tree
-        for part in parts[:-1]:
-            if part not in current:
-                current[part] = {}
-            current = current[part]
-        if include_dirs or os.path.isfile(file_path):
-            current[parts[-1]] = {}
-
-    def print_tree_recursive(node, prefix=""):
-        items = list(node.items())
-        for i, (name, subtree) in enumerate(items):
-            if i == len(items) - 1:
-                print(f"{prefix}└── {name}")
-                new_prefix = prefix + "    "
-            else:
-                print(f"{prefix}├── {name}")
-                new_prefix = prefix + "│   "
-            if subtree or (include_dirs and os.path.isdir(os.path.join(*node.keys(), name))):
-                print_tree_recursive(subtree, new_prefix)
-
-    print_tree_recursive(tree)
-
-
-def copy_to_clipboard(text, file_list, num_files):
+def copy_to_clipboard(text):
     system = platform.system()
     try:
         if system == 'Darwin':  # macOS
@@ -233,6 +212,5 @@ def copy_to_clipboard(text, file_list, num_files):
                 subprocess.run(['xclip', '-selection', 'clipboard'], input=text.encode('utf-8'), check=True)
             except FileNotFoundError:
                 subprocess.run(['xsel', '--clipboard', '--input'], input=text.encode('utf-8'), check=True)
-        print(f"Copied {len(text.splitlines())} lines from {num_files} files to clipboard.")
     except Exception as e:
         print(f"Failed to copy to clipboard: {e}")
