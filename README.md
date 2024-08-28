@@ -138,6 +138,83 @@ rstring -i
 
 5. **Large projects may produce substantial output**: Use `--preview-length` or specific patterns for better manageability.
 
+## Development
+
+If you'd like to contribute to Rstring or set it up for local development, follow these steps:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/tnunamak/rstring.git
+   cd rstring
+   ```
+
+2. Create a virtual environment and activate it:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+   ```
+
+3. Install the development dependencies:
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+
+4. Install the package in editable mode:
+   ```bash
+   pip install -e .
+   ```
+
+5. Run the tests:
+   ```bash
+   pytest
+   ```
+
+### Running Rstring Locally
+
+To run Rstring locally during development:
+
+1. Make sure you're in the project root directory and your virtual environment is activated.
+
+2. Run Rstring using the Python interpreter:
+   ```bash
+   python -m rstring [options]
+   ```
+
+   For example:
+   ```bash
+   python -m rstring --include=*/ --include=*.py --exclude=*
+   ```
+
+3. If you want to use the `rstring` command directly, you can create an alias or a batch file:
+
+   On Unix-like systems (add to your shell configuration file, e.g., `.bashrc` or `.zshrc`):
+   ```bash
+   alias rstring="python /path/to/rstring/directory/rstring/__main__.py"
+   ```
+
+   On Windows (create a batch file named `rstring.bat` in a directory in your PATH):
+   ```batch
+   @echo off
+   python C:\path\to\rstring\directory\rstring\__main__.py %*
+   ```
+
+   After setting up the alias or batch file, you can use `rstring` as if it were installed:
+   ```bash
+   rstring --help
+   ```
+
+### Contributing
+
+We welcome contributions to Rstring! Here are some guidelines:
+
+1. Fork the repository and create your branch from `main`.
+2. If you've added code that should be tested, add tests.
+3. Ensure the test suite passes.
+4. Make sure your code lints.
+5. Issue a pull request!
+
+For more details on contributing, please see our [CONTRIBUTING.md](CONTRIBUTING.md) file.
+
 ## Support and Contributing
 
 - Issues and feature requests: [GitHub Issues](https://github.com/tnunamak/rstring/issues)
