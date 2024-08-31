@@ -189,18 +189,18 @@ To run Rstring locally during development:
 
    On Unix-like systems (add to your shell configuration file, e.g., `.bashrc` or `.zshrc`):
    ```bash
-   alias rstring="python /path/to/rstring/directory/rstring/__main__.py"
+   alias rstring-dev="python /path/to/rstring/directory/rstring/__main__.py"
    ```
 
-   On Windows (create a batch file named `rstring.bat` in a directory in your PATH):
+   On Windows (create a batch file named `rstring-dev.bat` in a directory in your PATH):
    ```batch
    @echo off
    python C:\path\to\rstring\directory\rstring\__main__.py %*
    ```
 
-   After setting up the alias or batch file, you can use `rstring` as if it were installed:
+   After setting up the alias or batch file, you can use `rstring-dev` as if it were installed:
    ```bash
-   rstring --help
+   rstring-dev --help
    ```
 
 ### Contributing
