@@ -25,6 +25,10 @@ Thanks for your interest in contributing! Here's how to get started:
 
 4. **Use locally**:
    ```bash
+   # After pip install -e ., you can use rstring from anywhere:
+   rstring [options]
+
+   # Or if that doesn't work, use the module form:
    python -m rstring [options]
    ```
 
