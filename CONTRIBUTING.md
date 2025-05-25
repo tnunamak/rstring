@@ -8,8 +8,8 @@ Thanks for your interest in contributing! Here's how to get started:
    ```bash
    git clone https://github.com/tnunamak/rstring.git
    cd rstring
-   python -m venv venv-dev
-   source venv-dev/bin/activate  # Windows: venv-dev\Scripts\activate
+   python -m venv venv
+   source venv/bin/activate  # Windows: venv\Scripts\activate
    ```
 
 2. **Install for development**:
@@ -32,7 +32,7 @@ Thanks for your interest in contributing! Here's how to get started:
 5. **Switch between versions**:
    ```bash
    # Use development version
-   source venv-dev/bin/activate
+   source venv/bin/activate
    rstring [options]
 
    # Use production version
