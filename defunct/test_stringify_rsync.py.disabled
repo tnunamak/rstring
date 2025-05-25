@@ -1,0 +1,72 @@
+import unittest
+import os
+import shutil
+import subprocess
+import tempfile
+import json
+
+class TestStringifyRsync(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.test_dir = tempfile.mkdtemp()
+        cls.create_test_file_structure(cls.test_dir)
+        cls.script_path = os.path.abspath("stringify_rsync.py")
+        cls.test_preset_file = os.path.join(cls.test_dir, ".test_presets.json")
+        os.environ["STRINGIFY_PRESET_FILE"] = cls.test_preset_file
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.test_dir)
+        if os.path.exists(cls.test_preset_file):
+            os.remove(cls.test_preset_file)
+
+    @classmethod
+    def create_test_file_structure(cls, root):
+        os.makedirs(os.path.join(root, "src"))
+        os.makedirs(os.path.join(root, "tests"))
+
+        files = [
+            "file1.txt", "file2.py",
+            os.path.join("src", "main.py"),
+            os.path.join("../tests", "test_main.py")
+        ]
+
+        for file in files:
+            with open(os.path.join(root, file), "w") as f:
+                f.write(f"Content of {file}")
+
+    def run_stringify(self, *args):
+        cmd = ["python", self.script_path, self.test_dir] + list(args)
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        return result.stdout, result.stderr, result.returncode
+
+    def test_default_behavior(self):
+        output, _, _ = self.run_stringify()
+        self.assertIn("file1.txt", output)
+        self.assertIn("file2.py", output)
+        self.assertIn("src/main.py", output)
+        self.assertIn("tests/test_main.py", output)
+
+    def test_save_and_use_preset(self):
+        _, _, rc = self.run_stringify("--save-preset", "py_only", "--include=*.py --exclude=*")
+        self.assertEqual(rc, 0)
+
+        output, _, _ = self.run_stringify("--preset", "py_only")
+        self.assertNotIn("file1.txt", output)
+        self.assertIn("file2.py", output)
+        self.assertIn("src/main.py", output)
+        self.assertIn("tests/test_main.py", output)
+
+    def test_list_presets(self):
+        self.run_stringify("--save-preset", "test_preset", "--include=*.txt")
+        output, _, _ = self.run_stringify("--list-presets")
+        self.assertIn("test_preset", output)
+
+    def test_delete_preset(self):
+        self.run_stringify("--save-preset", "to_delete", "--include=*.txt")
+        self.run_stringify("--delete-preset", "to_delete")
+        output, _, _ = self.run_stringify("--list-presets")
+        self.assertNotIn("to_delete", output)
+
+if __name__ == '__main__':
+    unittest.main()

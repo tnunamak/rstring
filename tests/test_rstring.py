@@ -3,8 +3,21 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 import yaml
+import tempfile
+import shutil
+import os
+import sys
+
+# Add the parent directory to the path so we can import rstring
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from rstring import utils, cli
+from rstring.utils import (
+    load_presets, save_presets, check_rsync, run_rsync, validate_rsync_args,
+    gather_code, interactive_mode, get_tree_string, copy_to_clipboard,
+    get_default_preset, set_default_preset, parse_gitignore, is_binary
+)
+from rstring.cli import parse_target_directory, main
 
 
 @pytest.fixture
@@ -183,3 +196,84 @@ def test_main(temp_config):
                     cli.main()
                     mock_copy.assert_called_once()
                     mock_copy.assert_called_with(mock_gathered_code)
+
+
+def test_parse_target_directory():
+    """Test the parse_target_directory function."""
+    # Test -C flag
+    target_dir, remaining = parse_target_directory(['-C', '/tmp', '--include=*.py'])
+    assert target_dir == '/tmp'
+    assert remaining == ['--include=*.py']
+
+    # Test --directory flag
+    target_dir, remaining = parse_target_directory(['--directory', '/tmp', '--include=*.py'])
+    assert target_dir == '/tmp'
+    assert remaining == ['--include=*.py']
+
+    # Test --directory= format
+    target_dir, remaining = parse_target_directory(['--directory=/tmp', '--include=*.py'])
+    assert target_dir == '/tmp'
+    assert remaining == ['--include=*.py']
+
+    # Test positional directory (when it exists)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        target_dir, remaining = parse_target_directory([temp_dir, '--include=*.py'])
+        assert target_dir == os.path.abspath(temp_dir)
+        assert remaining == ['--include=*.py']
+
+    # Test no directory specified
+    target_dir, remaining = parse_target_directory(['--include=*.py'])
+    assert target_dir == os.path.abspath('.')
+    assert remaining == ['--include=*.py']
+
+    # Test error case
+    with pytest.raises(ValueError):
+        parse_target_directory(['-C'])
+
+
+@patch('rstring.cli.run_rsync')
+@patch('rstring.cli.gather_code')
+@patch('rstring.cli.copy_to_clipboard')
+@patch('rstring.cli.get_tree_string')
+@patch('rstring.cli.load_presets')
+@patch('rstring.cli.check_rsync')
+def test_main_with_target_directory(mock_check_rsync, mock_load_presets, mock_get_tree_string,
+                                   mock_copy_to_clipboard, mock_gather_code, mock_run_rsync):
+    """Test main function with target directory functionality."""
+    mock_check_rsync.return_value = True
+    mock_load_presets.return_value = {}
+    mock_run_rsync.return_value = ['test.py']
+    mock_gather_code.return_value = 'test content'
+    mock_get_tree_string.return_value = 'tree'
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a test file
+        test_file = os.path.join(temp_dir, 'test.py')
+        with open(test_file, 'w') as f:
+            f.write('print("hello")')
+
+        # Test -C flag
+        with patch('sys.argv', ['rstring', '-C', temp_dir, '--include=*.py', '--no-clipboard']):
+            with patch('os.chdir') as mock_chdir:
+                main()
+                # Should change to target dir and then back to original
+                assert mock_chdir.call_count == 2
+                mock_chdir.assert_any_call(temp_dir)
+
+        # Test positional argument
+        with patch('sys.argv', ['rstring', temp_dir, '--include=*.py', '--no-clipboard']):
+            with patch('os.chdir') as mock_chdir:
+                main()
+                # Should change to target dir and then back to original
+                assert mock_chdir.call_count == 2
+                mock_chdir.assert_any_call(temp_dir)
+
+
+def test_main_with_nonexistent_directory():
+    """Test main function with non-existent directory."""
+    with patch('rstring.cli.check_rsync', return_value=True):
+        with patch('rstring.cli.load_presets', return_value={}):
+            with patch('sys.argv', ['rstring', '-C', '/nonexistent', '--include=*.py']):
+                with patch('builtins.print') as mock_print:
+                    main()
+                    mock_print.assert_called_with("Error: Directory '/nonexistent' does not exist.")

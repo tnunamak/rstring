@@ -12,6 +12,42 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def parse_target_directory(args):
+    """Parse target directory from arguments with -C flag and positional support."""
+    # Look for -C/--directory flag first (use the last one if multiple)
+    target_dir = None
+    remaining_args = []
+    i = 0
+
+    while i < len(args):
+        arg = args[i]
+        if arg in ['-C', '--directory']:
+            if i + 1 < len(args):
+                target_dir = args[i + 1]
+                i += 2  # Skip both flag and value
+            else:
+                raise ValueError("-C/--directory requires a directory argument")
+        elif arg.startswith('--directory='):
+            target_dir = arg.split('=', 1)[1]
+            i += 1
+        else:
+            remaining_args.append(arg)
+            i += 1
+
+    # If no -C flag, check for positional directory argument (only the first non-flag arg)
+    if target_dir is None and remaining_args:
+        first_arg = remaining_args[0]
+        if not first_arg.startswith('-') and os.path.isdir(first_arg):
+            target_dir = first_arg
+            remaining_args = remaining_args[1:]
+
+    # Default to current directory
+    if target_dir is None:
+        target_dir = '.'
+
+    return os.path.abspath(target_dir), remaining_args
+
+
 def main():
     if not check_rsync():
         print("Error: rsync is not installed on this system. Please install rsync and try again.")
@@ -23,6 +59,7 @@ def main():
     parser.add_argument("-lp", "--list-presets", action="store_true", help="List all saved presets")
     parser.add_argument("-dp", "--delete-preset", help="Delete a saved preset")
     parser.add_argument("-sdp", "--set-default-preset", help="Set the default preset")
+    parser.add_argument("-C", "--directory", help="Change to directory before processing")
     parser.add_argument("-i", "--interactive", action="store_true", help="Enter interactive mode")
     parser.add_argument("-nc", "--no-clipboard", action="store_true", help="Don't copy output to clipboard")
     parser.add_argument("-pl", "--preview-length", type=int, metavar="N",
@@ -40,7 +77,8 @@ def main():
     if args.list_presets:
         print("Saved presets:")
         for name, preset in presets.items():
-            print(f"  {'*' if preset.get('is_default', False) else ' '} {name}: {' '.join(preset['args'])}")
+            args_str = ' '.join(preset.get('args', [])) if preset.get('args') else '(no args)'
+            print(f"  {'*' if preset.get('is_default', False) else ' '} {name}: {args_str}")
         return
 
     if args.delete_preset:
@@ -56,18 +94,33 @@ def main():
         set_default_preset(presets, args.set_default_preset)
         return
 
-    preset_name = args.preset or get_default_preset(presets) if not unknown_args else None
+    # Parse target directory from -C flag or positional args
+    try:
+        if args.directory:
+            target_dir = os.path.abspath(args.directory)
+            rsync_args_base = unknown_args
+        else:
+            target_dir, rsync_args_base = parse_target_directory(unknown_args)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    # Validate target directory exists
+    if not os.path.isdir(target_dir):
+        print(f"Error: Directory '{target_dir}' does not exist.")
+        return
+
+    # Handle presets
+    preset_name = args.preset or get_default_preset(presets) if not rsync_args_base else None
     if preset_name:
         preset = presets.get(preset_name)
         if preset:
-            rsync_args = preset['args']
+            rsync_args = preset['args'] + rsync_args_base
         else:
             print(f"Error: Preset '{preset_name}' not found.")
             return
     else:
-        rsync_args = []
-
-    rsync_args.extend(unknown_args)
+        rsync_args = rsync_args_base
 
     if args.save_preset:
         name = args.save_preset
@@ -76,29 +129,40 @@ def main():
         print(f"Preset '{name}' saved.")
         return
 
+    # Handle gitignore in target directory
     if args.use_gitignore:
-        gitignore_path = os.path.join(os.getcwd(), '.gitignore')
+        gitignore_path = os.path.join(target_dir, '.gitignore')
         if os.path.exists(gitignore_path):
             gitignore_patterns = parse_gitignore(gitignore_path)
             rsync_args = gitignore_patterns + rsync_args
         else:
-            print("Warning: No .gitignore file found. Use --no-gitignore to ignore .gitignore patterns")
+            print(f"Warning: No .gitignore file found in {target_dir}. Use --no-gitignore to ignore .gitignore patterns")
 
+    # Add default source if none specified
     if not any(arg for arg in rsync_args if not arg.startswith('--')):
         rsync_args.append('.')
 
-    if not validate_rsync_args(rsync_args):
-        print("Error: Invalid rsync arguments. Please check and try again.")
-        return
+    # Change to target directory for rsync execution
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(target_dir)
 
-    if args.interactive:
-        rsync_args = interactive_mode(rsync_args, args.include_dirs)
+        if not validate_rsync_args(rsync_args):
+            print("Error: Invalid rsync arguments. Please check and try again.")
+            return
 
-    file_list = run_rsync(rsync_args)
-    result = gather_code(file_list, args.preview_length, args.include_dirs)
+        if args.interactive:
+            rsync_args = interactive_mode(rsync_args, args.include_dirs)
 
-    tree = get_tree_string(file_list, include_dirs=args.include_dirs, use_color=False)
-    num_files = len([f for f in file_list if not os.path.isdir(f)])
+        file_list = run_rsync(rsync_args)
+        result = gather_code(file_list, args.preview_length, args.include_dirs)
+
+        tree = get_tree_string(file_list, include_dirs=args.include_dirs, use_color=False)
+        num_files = len([f for f in file_list if not os.path.isdir(f)])
+
+    finally:
+        os.chdir(original_cwd)
+
     if args.summary:
         from datetime import datetime
         result_with_summary = ["### COLLECTION SUMMARY ###", "",
@@ -120,22 +184,24 @@ def main():
 
     if not args.no_clipboard:
         action = f"Collected {len(result.splitlines())} lines from {num_files}" if args.no_clipboard else f"Copied {len(result.splitlines())} lines from {num_files} files to clipboard"
+        target_info = f" from {target_dir}" if target_dir != original_cwd else ""
+
         if preset_name:
             preset = presets.get(preset_name) if preset_name else None
             if ' '.join(rsync_args) != ' '.join(preset['args']):
                 if 'gitignore_patterns' in locals() and ' '.join(gitignore_patterns + preset['args']) != ' '.join(
                         rsync_args):
-                    print(f"{action} using preset '{preset_name}' with modified rsync options: {' '.join(rsync_args)}")
+                    print(f"{action}{target_info} using preset '{preset_name}' with modified rsync options: {' '.join(rsync_args)}")
                 else:
-                    print(f"{action} using preset '{preset_name}' modified by .gitignore")
+                    print(f"{action}{target_info} using preset '{preset_name}' modified by .gitignore")
             else:
-                print(f"{action} using preset '{preset_name}'")
+                print(f"{action}{target_info} using preset '{preset_name}'")
         else:
             if 'gitignore_patterns' in locals():
                 print(
-                    f"{action} using custom rsync options modified by .gitignore: {' '.join(rsync_args).replace(' '.join(gitignore_patterns), '')}")
+                    f"{action}{target_info} using custom rsync options modified by .gitignore: {' '.join(rsync_args).replace(' '.join(gitignore_patterns), '')}")
             else:
-                print(f"{action} using custom rsync options: {' '.join(rsync_args)}:")
+                print(f"{action}{target_info} using custom rsync options: {' '.join(rsync_args)}")
 
 
 if __name__ == '__main__':

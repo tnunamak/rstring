@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+import argparse
+import os
+import fnmatch
+import re
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Gather code from a directory into a single string with file paths labeled.')
+    parser.add_argument('directory', type=str, help='Root directory to gather code from')
+    parser.add_argument('-o', '--output', type=str, help='Output file (default is stdout)', default=None)
+    parser.add_argument('patterns', nargs='*', help='Include/exclude patterns (prefix with - to exclude)')
+    return parser.parse_args()
+
+def is_binary(file_path):
+    """Check if file is binary"""
+    with open(file_path, 'rb') as file:
+        return b'\0' in file.read(1024)
+
+def match_path(path, pattern):
+    """Match a path against a pattern, supporting rsync-like wildcards"""
+    if pattern.startswith('/'):
+        pattern = pattern[1:]  # Remove leading '/' for anchored patterns
+    else:
+        pattern = f'**/{pattern}'  # Unanchored patterns can match anywhere in the path
+    
+    # Convert rsync-like pattern to regex
+    regex = fnmatch.translate(pattern)
+    regex = regex.replace(r'\Z(?ms)', '')  # Remove end of string match
+    regex = regex.replace('**/', '(.*\/)*')  # Support '**' wildcard
+    
+    return re.match(regex, path) is not None
+
+def should_include(path, patterns):
+    """Determine if a path should be included based on the patterns"""
+    include = True  # Default to include
+    for pattern in patterns:
+        if pattern.startswith('-'):  # Exclude pattern
+            if match_path(path, pattern[1:]):
+                include = False
+        elif match_path(path, pattern):  # Include pattern
+            include = True
+    return include
+
+def gather_code(directory, patterns):
+    result = ""
+    for root, dirs, files in os.walk(directory, topdown=True):
+        rel_root = os.path.relpath(root, directory)
+        print(f"Processing directory: {rel_root}")  # Debug output
+        
+        # Filter directories
+        dirs[:] = [d for d in dirs if should_include(os.path.join(rel_root, d + '/'), patterns)]
+        print(f"Dirs after filtering: {dirs}")  # Debug output
+        
+        # Process files
+        for file in files:
+            file_path = os.path.join(rel_root, file)
+            print(f"Checking file: {file_path}")  # Debug output
+            if should_include(file_path, patterns):
+                print(f"Including file: {file_path}")  # Debug output
+                full_path = os.path.join(root, file)
+                try:
+                    if is_binary(full_path):
+                        result += f'--- {file_path} ---\n[Binary file]\n'
+                    else:
+                        with open(full_path, 'r', encoding='utf-8', errors='ignore') as file_content:
+                            file_data = file_content.read()
+                            result += f'--- {file_path} ---\n{file_data}\n'
+                except Exception as e:
+                    print(f"Error reading {file_path}: {e}")
+            else:
+                print(f"Excluding file: {file_path}")  # Debug output
+    
+    return result
+
+def main():
+    args = parse_arguments()
+    
+    # Handle trailing slash in directory
+    if args.directory.endswith('/'):
+        base_dir = os.path.dirname(args.directory.rstrip('/'))
+        if not base_dir:
+            base_dir = '..'
+        patterns = ['*/'] + args.patterns
+    else:
+        base_dir = os.path.dirname(args.directory)
+        if not base_dir:
+            base_dir = '..'
+        patterns = [os.path.basename(args.directory)] + args.patterns
+    
+    print(f"Base directory: {base_dir}")  # Debug output
+    print(f"Patterns: {patterns}")  # Debug output
+    
+    result = gather_code(base_dir, patterns)
+    
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8') as f:
+            f.write(result)
+    else:
+        print(result)
+
+if __name__ == '__main__':
+    main()
