@@ -3,9 +3,9 @@ import logging
 import os
 
 from .utils import (
-    load_presets, save_presets, check_rsync, run_rsync, validate_rsync_args,
+    check_rsync, run_rsync, validate_rsync_args,
     gather_code, interactive_mode, get_tree_string, copy_to_clipboard,
-    get_default_preset, set_default_preset, parse_gitignore
+    parse_gitignore
 )
 
 from .git import filter_ignored_files
@@ -50,17 +50,33 @@ def parse_target_directory(args):
     return os.path.abspath(target_dir), remaining_args
 
 
+def get_default_patterns():
+    """Conservative default: include everything, let gitignore filter."""
+    return ['--include=*/']
+
+
 def main():
     if not check_rsync():
         print("Error: rsync is not installed on this system. Please install rsync and try again.")
         return
 
-    parser = argparse.ArgumentParser(description="Stringify code with rsync and manage presets.", allow_abbrev=False)
-    parser.add_argument("-p", "--preset", help="Use a saved preset")
-    parser.add_argument("-sp", "--save-preset", type=str, metavar="NAME", help="Save the command as a preset")
-    parser.add_argument("-lp", "--list-presets", action="store_true", help="List all saved presets")
-    parser.add_argument("-dp", "--delete-preset", help="Delete a saved preset")
-    parser.add_argument("-sdp", "--set-default-preset", help="Set the default preset")
+    parser = argparse.ArgumentParser(
+        description="Stringify code with rsync filtering.",
+        epilog="""
+Examples:
+  rstring                           # All files (gitignore filtered)
+  rstring --include='*.py'          # Only Python files
+  rstring -C /path/to/project       # Different directory
+  rstring --include='*/' --include='*.js' --exclude='test*'  # Complex patterns
+
+For frequently used patterns, create shell aliases:
+  alias rstring-py="rstring --include='*/' --include='*.py' --exclude='test*'"
+  alias rstring-web="rstring --include='*/' --include='*.{js,css,html}'"
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False
+    )
+
     parser.add_argument("-C", "--directory", help="Change to directory before processing")
     parser.add_argument("-i", "--interactive", action="store_true", help="Enter interactive mode")
     parser.add_argument("-nc", "--no-clipboard", action="store_true", help="Don't copy output to clipboard")
@@ -73,28 +89,6 @@ def main():
                         help="Don't use .gitignore patterns")
 
     args, unknown_args = parser.parse_known_args()
-
-    presets = load_presets()
-
-    if args.list_presets:
-        print("Saved presets:")
-        for name, preset in presets.items():
-            args_str = ' '.join(preset.get('args', [])) if preset.get('args') else '(no args)'
-            print(f"  {'*' if preset.get('is_default', False) else ' '} {name}: {args_str}")
-        return
-
-    if args.delete_preset:
-        if args.delete_preset in presets:
-            del presets[args.delete_preset]
-            save_presets(presets)
-            print(f"Preset '{args.delete_preset}' deleted.")
-        else:
-            print(f"Preset '{args.delete_preset}' not found.")
-        return
-
-    if args.set_default_preset:
-        set_default_preset(presets, args.set_default_preset)
-        return
 
     # Parse target directory from -C flag or positional args
     try:
@@ -112,24 +106,11 @@ def main():
         print(f"Error: Directory '{target_dir}' does not exist.")
         return
 
-    # Handle presets
-    preset_name = args.preset or get_default_preset(presets) if not rsync_args_base else None
-    if preset_name:
-        preset = presets.get(preset_name)
-        if preset:
-            rsync_args = preset['args'] + rsync_args_base
-        else:
-            print(f"Error: Preset '{preset_name}' not found.")
-            return
-    else:
+    # Use provided patterns or conservative default
+    if rsync_args_base:
         rsync_args = rsync_args_base
-
-    if args.save_preset:
-        name = args.save_preset
-        presets[name] = {'is_default': False, 'args': rsync_args}
-        save_presets(presets)
-        print(f"Preset '{name}' saved.")
-        return
+    else:
+        rsync_args = get_default_patterns()
 
     # Handle gitignore in target directory
     if args.use_gitignore:
@@ -194,24 +175,8 @@ def main():
     if not args.no_clipboard:
         action = f"Collected {len(result.splitlines())} lines from {num_files}" if args.no_clipboard else f"Copied {len(result.splitlines())} lines from {num_files} files to clipboard"
         target_info = f" from {target_dir}" if target_dir != original_cwd else ""
-
-        if preset_name:
-            preset = presets.get(preset_name) if preset_name else None
-            if ' '.join(rsync_args) != ' '.join(preset['args']):
-                if 'gitignore_patterns' in locals() and ' '.join(gitignore_patterns + preset['args']) != ' '.join(
-                        rsync_args):
-                    print(f"{action}{target_info} using preset '{preset_name}' with modified rsync options: {' '.join(rsync_args)}")
-                else:
-                    print(f"{action}{target_info} using preset '{preset_name}' modified by .gitignore")
-            else:
-                print(f"{action}{target_info} using preset '{preset_name}'")
-        else:
-            if 'gitignore_patterns' in locals():
-                print(
-                    f"{action}{target_info} using custom rsync options modified by .gitignore: {' '.join(rsync_args).replace(' '.join(gitignore_patterns), '')}")
-            else:
-                print(f"{action}{target_info} using custom rsync options: {' '.join(rsync_args)}")
+        print(f"{action}{target_info}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

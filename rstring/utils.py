@@ -5,62 +5,9 @@ import platform
 import shlex
 import subprocess
 
-import yaml
-
 logger = logging.getLogger(__name__)
 
-PRESETS_FILE = os.path.expanduser("~/.rstring.yaml")
-DEFAULT_PRESETS_FILE = os.path.join(os.path.dirname(__file__), 'default_presets.yaml')
-
 from .tree import get_tree_string
-
-
-def load_presets():
-    if os.path.exists(PRESETS_FILE):
-        try:
-            with open(PRESETS_FILE, 'r') as f:
-                return yaml.safe_load(f)
-        except yaml.YAMLError as e:
-            logger.error(f"Error parsing {PRESETS_FILE}: {e}")
-            print(f"Error parsing {PRESETS_FILE}. Using empty presets.")
-        except Exception as e:
-            logger.error(f"Error reading {PRESETS_FILE}: {e}")
-            print(f"Error reading {PRESETS_FILE}. Using empty presets.")
-    else:
-        try:
-            with open(DEFAULT_PRESETS_FILE, 'r') as df:
-                content = df.read()
-                with open(PRESETS_FILE, 'w') as f:
-                    f.write(content)
-                return yaml.safe_load(content) or {}
-        except Exception as e:
-            logger.error(f"Error reading or writing preset files: {e}")
-            print(f"Error with preset files. Using empty presets.")
-    return {}
-
-
-def save_presets(presets):
-    with open(PRESETS_FILE, 'w') as f:
-        yaml.dump(presets, f)
-
-
-def get_default_preset(presets):
-    for name, preset in presets.items():
-        if preset.get('is_default', False):
-            return name
-    return None
-
-
-def set_default_preset(presets, preset_name):
-    if preset_name not in presets:
-        print(f"Error: Preset '{preset_name}' not found")
-        return
-
-    for name, preset in presets.items():
-        preset['is_default'] = (name == preset_name)
-
-    save_presets(presets)
-    print(f"Default preset set to '{preset_name}'")
 
 
 def parse_gitignore(gitignore_path):
@@ -203,14 +150,18 @@ def interactive_mode(initial_args, include_dirs=False):
 def copy_to_clipboard(text):
     system = platform.system()
     try:
-        if system == 'Darwin':  # macOS
-            subprocess.run(['pbcopy'], input=text.encode('utf-8'), check=True)
-        elif system == 'Windows':
-            subprocess.run(['clip'], input=text.encode('utf-8'), check=True)
-        elif system == 'Linux':
-            try:
-                subprocess.run(['xclip', '-selection', 'clipboard'], input=text.encode('utf-8'), check=True)
-            except FileNotFoundError:
-                subprocess.run(['xsel', '--clipboard', '--input'], input=text.encode('utf-8'), check=True)
-    except Exception as e:
+        if system == "Darwin":  # macOS
+            subprocess.run(["pbcopy"], input=text, text=True, check=True)
+        elif system == "Linux":
+            subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True)
+        elif system == "Windows":
+            subprocess.run(["clip"], input=text, text=True, check=True)
+        else:
+            print(f"Unsupported platform: {system}")
+    except subprocess.CalledProcessError as e:
         print(f"Failed to copy to clipboard: {e}")
+    except FileNotFoundError:
+        if system == "Linux":
+            print("xclip not found. Please install xclip to enable clipboard functionality.")
+        else:
+            print("Clipboard functionality not available.")

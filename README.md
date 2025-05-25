@@ -51,28 +51,24 @@ For more detailed information about pipx and its usage, refer to the [pipx docum
 
 Basic usage:
 ```bash
-rstring  # Use the default preset
+rstring  # All files (filtered by .gitignore)
 ```
 
 Work with different directories:
 ```bash
 rstring /path/to/project  # Analyze a specific directory
-rstring -C /path/to/project --preset my_preset  # Change directory with preset
+rstring -C /path/to/project  # Change directory before processing
 ```
 
 Custom filtering:
 ```bash
-rstring --include=*/ --include=*.py --exclude=* # traverse all dirs, include .py files, exclude everything else
+rstring --include='*.py'  # Only Python files
+rstring --include='*/' --include='*.js' --exclude='test*'  # Complex patterns
 ```
 
 Get help:
 ```bash
 rstring --help
-```
-
-Use a specific preset:
-```bash
-rstring --preset my_preset
 ```
 
 Get a tree view of selected files:
@@ -82,12 +78,44 @@ rstring --summary
 
 ## Advanced Usage
 
-### Custom Presets
+### Custom Filtering
 
-Create a new preset:
+Rstring uses rsync's powerful include/exclude patterns:
+
 ```bash
-rstring --save-preset python --include=*/ --include=*.py --exclude=*  # save it
-rstring --preset python  # use it
+# Include only Python files
+rstring --include='*/' --include='*.py' --exclude='*'
+
+# Include web development files, exclude tests
+rstring --include='*/' --include='*.{js,css,html}' --exclude='test*' --exclude='*'
+
+# Include documentation
+rstring --include='*/' --include='*.md' --include='*.rst' --exclude='*'
+```
+
+### Creating Custom Shortcuts
+
+For frequently used patterns, create shell aliases in your `.bashrc` or `.zshrc`:
+
+```bash
+# Python source files only
+alias rstring-py="rstring --include='*/' --include='*.py' --exclude='test*'"
+
+# Web development files
+alias rstring-web="rstring --include='*/' --include='*.{js,ts,css,html}' --exclude='node_modules/'"
+
+# Documentation files
+alias rstring-docs="rstring --include='*/' --include='*.{md,rst,txt}' --exclude='*'"
+
+# All source code (no tests, docs, or config)
+alias rstring-src="rstring --include='src/' --include='lib/' --exclude='*'"
+```
+
+Usage:
+```bash
+rstring-py                    # Python files in current directory
+rstring-web -C /path/to/app   # Web files in different directory
+rstring-docs --summary        # Documentation with tree view
 ```
 
 ### File Preview
@@ -97,7 +125,6 @@ Limit output to first N lines of each file:
 rstring --preview-length=10
 ```
 
-
 ### Gitignore Integration
 
 By default, Rstring automatically excludes .gitignore patterns. To ignore .gitignore:
@@ -105,7 +132,7 @@ By default, Rstring automatically excludes .gitignore patterns. To ignore .gitig
 rstring --no-gitignore
 ```
 
-### Interactive mode:
+### Interactive mode
 
 Enter interactive mode to continuously preview and select matched files:
 ```bash
@@ -116,7 +143,7 @@ rstring -i
 
 1. **Under the Hood**: Rstring efficiently selects files based on filters by running `rsync --archive --itemize-changes --dry-run --list-only <your filters>`. This means you can use Rsync's powerful include/exclude patterns to customize file selection.
 
-2. **Preset System**: The default configuration file is at `~/.rstring.yaml`. The 'common' preset is used by default and includes sensible exclusions for most projects.
+2. **Default Behavior**: When run without specific patterns, rstring includes all files and directories, filtered by your project's `.gitignore` file.
 
 3. **Output Format**:
    ```
@@ -135,15 +162,39 @@ rstring -i
 
 ## Pro Tips
 
-1. **Explore the default preset**: Check `~/.rstring.yaml` to see how the 'common' preset works.
+1. **Start simple**: `rstring` with no arguments gives you everything in your project (filtered by .gitignore).
 
 2. **Refer to Rsync documentation**: Rstring uses Rsync for file selection. Refer to the [Filter Rules](https://linux.die.net/man/1/rsync) section of the rsync man page to understand how include/exclude patterns work.
 
-3. **Customize for your project**: Create a project-specific preset for quick context gathering.
+3. **Create project-specific aliases**: Set up shell aliases for your common file selection patterns.
 
 4. **Use with AI tools**: Rstring is great for preparing code context for AI programming assistants.
 
 5. **Large projects may produce substantial output**: Use `--preview-length` or specific patterns for better manageability.
+
+## Common Patterns
+
+Here are some useful rsync patterns for different scenarios:
+
+```bash
+# Python projects
+rstring --include='*/' --include='*.py' --exclude='__pycache__/' --exclude='test*'
+
+# JavaScript/Node.js projects
+rstring --include='*/' --include='*.{js,ts,jsx,tsx}' --exclude='node_modules/' --exclude='test*'
+
+# Web projects (frontend)
+rstring --include='*/' --include='*.{js,ts,css,html,vue,svelte}' --exclude='dist/' --exclude='build/'
+
+# Documentation only
+rstring --include='*/' --include='*.{md,rst,txt}' --exclude='*'
+
+# Configuration files
+rstring --include='*/' --include='*.{json,yaml,yml,toml,ini}' --exclude='*'
+
+# Source code only (exclude tests, docs, config)
+rstring --include='src/' --include='lib/' --exclude='*'
+```
 
 ## Support and Contributing
 
