@@ -54,6 +54,13 @@ Basic usage:
 rstring  # Use the default preset
 ```
 
+Work with different directories:
+```bash
+rstring /path/to/project  # Analyze a specific directory
+rstring -C /path/to/project --preset my_preset  # Change directory with preset
+```
+
+Custom filtering:
 ```bash
 rstring --include=*/ --include=*.py --exclude=* # traverse all dirs, include .py files, exclude everything else
 ```
@@ -140,8 +147,9 @@ rstring -i
 
 ## Support and Contributing
 
-- Issues and feature requests: [GitHub Issues](https://github.com/tnunamak/rstring/issues)
-- Contributions: Pull requests are welcome!
+- **Issues and feature requests**: [GitHub Issues](https://github.com/tnunamak/rstring/issues)
+- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines
+- **Pull requests welcome!**
 
 ## License
 
