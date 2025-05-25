@@ -1,13 +1,88 @@
 everything:
     is_default: false
     args:
-        - .
 
 common:
   is_default: true
   args:
-    # Common exclusions
-    - --exclude=.*
+    # Exclude common build and cache directories
+    - --exclude=.git
+    - --exclude=__pycache__/*
+    - --exclude=*.py[cod]
+    - --exclude=*$py.class
+    - --exclude=*.so
+    - --exclude=.Python
+    - --exclude=build/*
+    - --exclude=develop-eggs/*
+    - --exclude=dist/*
+    - --exclude=downloads/*
+    - --exclude=eggs/*
+    - --exclude=.eggs/*
+    - --exclude=lib/*
+    - --exclude=lib64/*
+    - --exclude=parts/*
+    - --exclude=sdist/*
+    - --exclude=var/*
+    - --exclude=wheels/*
+    - --exclude=pip-wheel-metadata/*
+    - --exclude=share/python-wheels/*
+    - --exclude=*.egg-info/*
+    - --exclude=.installed.cfg
+    - --exclude=*.egg
+    - --exclude=MANIFEST
+
+    # PyInstaller
+    - --exclude=*.manifest
+    - --exclude=*.spec
+
+    # Installer logs
+    - --exclude=pip-log.txt
+    - --exclude=pip-delete-this-directory.txt
+
+    # Unit test / coverage reports
+    - --exclude=htmlcov/*
+    - --exclude=.tox/*
+    - --exclude=.nox/*
+    - --exclude=.coverage
+    - --exclude=.coverage.*
+    - --exclude=.cache
+    - --exclude=nosetests.xml
+    - --exclude=coverage.xml
+    - --exclude=*.cover
+    - --exclude=*.py,cover
+    - --exclude=.hypothesis/*
+    - --exclude=.pytest_cache/*
+
+    # Environments
+    - --exclude=.env
+    - --exclude=.venv
+    - --exclude=env/*
+    - --exclude=venv/*
+    - --exclude=ENV/*
+    - --exclude=env.bak/*
+    - --exclude=venv.bak/*
+
+    # mypy
+    - --exclude=.mypy_cache/*
+    - --exclude=.dmypy.json
+    - --exclude=dmypy.json
+
+    # Pyre type checker
+    - --exclude=.pyre/*
+
+    # macOS
+    - --exclude=.DS_Store
+    - --exclude=.DS_Store?
+    - --exclude=._*
+    - --exclude=.Spotlight-V100
+    - --exclude=.Trashes
+    - --exclude=ehthumbs.db
+    - --exclude=Thumbs.db
+
+    # IDEs
+    - --exclude=.idea/*
+
+    # Common patterns
     - --exclude=.*/
     - --exclude=*.log
     - --exclude=*.bak
@@ -18,18 +93,12 @@ common:
     - --exclude=*~
     - --exclude=Thumbs.db
     - --exclude=.DS_Store
-
-    # Version control
     - --exclude=.git
     - --exclude=.svn
     - --exclude=.hg
-
-    # IDE and editor files
     - --exclude=.vscode
     - --exclude=.idea
     - --exclude=*.sublime-*
-
-    # Build outputs and dependencies
     - --exclude=venv
     - --exclude=env
     - --exclude=.venv
@@ -42,6 +111,8 @@ common:
     - --exclude=.mypy_cache
     - --exclude=.coverage
     - --exclude=htmlcov
+
+    # Node.js
     - --exclude=node_modules
     - --exclude=bower_components
     - --exclude=dist
@@ -50,12 +121,16 @@ common:
     - --exclude=.nuxt
     - --exclude=*.min.js
     - --exclude=*.min.css
+
+    # Java
     - --exclude=vendor/
     - --exclude=*.class
     - --exclude=*.jar
     - --exclude=*.war
     - --exclude=*.ear
     - --exclude=target/
+
+    # C/C++
     - --exclude=*.o
     - --exclude=*.a
     - --exclude=*.so
@@ -75,7 +150,7 @@ common:
     - --exclude=Pipfile.lock
     - --exclude=Cargo.lock
 
-    # Potential secret files
+    # Secrets and keys
     - --exclude=*.env
     - --exclude=.env*
     - --exclude=*.pem
@@ -85,7 +160,7 @@ common:
     - --exclude=*.crt
     - --exclude=*.cer
 
-    # Documentation and media files
+    # Binary files
     - --exclude=*.pdf
     - --exclude=*.doc
     - --exclude=*.docx
@@ -105,10 +180,10 @@ common:
     - --exclude=*.avi
     - --exclude=*.mov
 
-    # Include all directory paths
+    # Include directories first
     - --include=*/
 
-    # Include common source code files
+    # Include common source files
     - --include=*.py
     - --include=*.ipynb
     - --include=*.js
@@ -146,7 +221,7 @@ common:
     - --include=*.zsh
     - --include=*.sql
 
-    # Include common configuration and data files
+    # Include configuration files
     - --include=*.ini
     - --include=*.cfg
     - --include=*.conf
@@ -154,8 +229,6 @@ common:
     - --include=*.yaml
     - --include=*.yml
     - --include=*.json
-
-    # Include specific important configuration files
     - --include=.gitignore
     - --include=.dockerignore
     - --include=requirements.txt
@@ -169,12 +242,12 @@ common:
     - --include=Cargo.toml
     - --include=.editorconfig
 
-    # Include documentation files
+    # Include documentation
     - --include=*.md
     - --include=*.rst
     - --include=*.txt
 
-    # Include other important files
+    # Include build files
     - --include=Dockerfile
     - --include=*.dockerfile
     - --include=Makefile
@@ -185,42 +258,29 @@ common:
     # Exclude everything else
     - --exclude=*
 
-    # Root directory
-    - .
-
 # Add more presets as needed, for example:
 
 docs-only:
   is_default: false
   args:
-
-    # Include all directories for traversal
+    # Include directories
     - --include=*/
 
-    # Include only documentation files
+    # Include documentation files
     - --include=*.md
     - --include=*.rst
     - --include=*.txt
     - --include=*.adoc
-    - --include=*.docx
-    - --include=*.pdf
+    - --include=*.asciidoc
 
-    # Include specific documentation files
-    - --include=README*
-    - --include=CONTRIBUTING*
-    - --include=CHANGELOG*
-    - --include=LICENSE*
+    # Include configuration files that might contain documentation
+    - --include=*.yaml
+    - --include=*.yml
+    - --include=*.json
+    - --include=*.toml
 
-    # Include documentation directories
-    - --include=docs/***
-    - --include=documentation/***
-    - --include=wiki/***
-
-    # Prune other directories to speed up the process
+    # Prune empty directories
     - --prune-empty-dirs
 
     # Exclude everything by default
     - --exclude=*
-
-    # Root directory
-    - .

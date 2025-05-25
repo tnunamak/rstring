@@ -39,7 +39,10 @@ setup(
         "pyyaml>=6.0.1",
     ],
     extras_require={
-        'dev': ['pytest>=8.3.2'],
+        'dev': [
+            'pytest>=8.3.2',
+            'hypothesis>=6.108.5',
+        ]
     },
     package_data={
         "rstring": ["default_presets.yaml"],

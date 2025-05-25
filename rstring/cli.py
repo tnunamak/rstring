@@ -8,6 +8,8 @@ from .utils import (
     get_default_preset, set_default_preset, parse_gitignore
 )
 
+from .git import filter_ignored_files
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -155,6 +157,13 @@ def main():
             rsync_args = interactive_mode(rsync_args, args.include_dirs)
 
         file_list = run_rsync(rsync_args)
+
+        # Apply git filtering if in a git repository
+        try:
+            file_list = filter_ignored_files(target_dir, file_list)
+        except Exception as e:
+            logger.warning(f"Git filtering failed: {e}")
+
         result = gather_code(file_list, args.preview_length, args.include_dirs)
 
         tree = get_tree_string(file_list, include_dirs=args.include_dirs, use_color=False)
