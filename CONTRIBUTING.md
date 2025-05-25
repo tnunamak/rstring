@@ -4,12 +4,12 @@ Thanks for your interest in contributing! Here's how to get started:
 
 ## Development Setup
 
-1. **Clone and setup**:
+1. **Clone and setup development environment**:
    ```bash
    git clone https://github.com/tnunamak/rstring.git
    cd rstring
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
+   python -m venv venv-dev
+   source venv-dev/bin/activate  # Windows: venv-dev\Scripts\activate
    ```
 
 2. **Install for development**:
@@ -23,13 +23,21 @@ Thanks for your interest in contributing! Here's how to get started:
    pytest
    ```
 
-4. **Use locally**:
+4. **Use development version**:
    ```bash
-   # After pip install -e ., you can use rstring from anywhere:
+   # With dev environment activated
+   rstring [options]  # Uses your development code
+   ```
+
+5. **Switch between versions**:
+   ```bash
+   # Use development version
+   source venv-dev/bin/activate
    rstring [options]
 
-   # Or if that doesn't work, use the module form:
-   python -m rstring [options]
+   # Use production version
+   deactivate
+   rstring [options]  # Uses globally installed version
    ```
 
 ## Guidelines
