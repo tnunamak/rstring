@@ -156,10 +156,15 @@ For frequently used patterns, create shell aliases:
 
     if args.summary:
         from datetime import datetime
+        lines = len(result.splitlines())
+        chars = len(result)
+        tokens = chars // 4  # Rough estimate: 1 token ≈ 4 characters
         result_with_summary = ["### COLLECTION SUMMARY ###", "",
-                               "The following files have been collected using the Rstring command.",
+                               "The following files have been collected using the rstring command.",
                                "Binary files are truncated to the first 32 bytes.", "", f"Files: {num_files}",
-                               f"Lines: {len(result.splitlines())}",
+                               f"Lines: {lines}",
+                               f"Characters: {chars:,}",
+                               f"Tokens (est.): ~{tokens:,}",
                                f"Collected at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", "", tree, "",
                                "### FILE CONTENTS ###", result]
 
@@ -174,9 +179,13 @@ For frequently used patterns, create shell aliases:
         copy_to_clipboard(result)
 
     if not args.no_clipboard:
-        action = f"Collected {len(result.splitlines())} lines from {num_files}" if args.no_clipboard else f"Copied {len(result.splitlines())} lines from {num_files} files to clipboard"
+        lines = len(result.splitlines())
+        chars = len(result)
+        tokens = chars // 4  # Rough estimate: 1 token ≈ 4 characters
+        action = f"Collected {lines} lines ({chars:,} chars, ~{tokens:,} tokens) from {num_files}" if args.no_clipboard else f"Copied {lines} lines ({chars:,} chars, ~{tokens:,} tokens) from {num_files} files to clipboard"
         target_info = f" from {target_dir}" if target_dir != original_cwd else ""
-        print(f"{action}{target_info}")
+        if 'RSTRING_TESTING' not in os.environ:
+            print(f"{action}{target_info}")
 
 
 if __name__ == "__main__":

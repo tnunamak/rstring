@@ -4,6 +4,7 @@ import os
 import platform
 import shlex
 import subprocess
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -110,18 +111,18 @@ def gather_code(file_list, preview_length=None, include_dirs=False):
     return result[:-2]
 
 
-def interactive_mode(initial_args, include_dirs=False):
+def interactive_mode(initial_args, include_dirs=False, stdout=sys.stdout):
     args = initial_args.copy()
     while True:
-        print(args)
+        print(args, file=stdout)
         if not validate_rsync_args(args):
-            print("Error: Invalid rsync arguments. Please try again.")
+            print("Error: Invalid rsync arguments. Please try again.", file=sys.stderr)
             continue
 
         file_list = run_rsync(args)
-        print("\nCurrent file list:")
-        print(get_tree_string(file_list, include_dirs=include_dirs))
-        print(f"\nCurrent rsync arguments: {' '.join(args)}")
+        print("\nCurrent file list:", file=stdout)
+        print(get_tree_string(file_list, include_dirs=include_dirs), file=stdout)
+        print(f"\nCurrent rsync arguments: {' '.join(args)}", file=stdout)
 
         action = input("\nEnter an action (a)dd/(r)emove/(e)dit/(d)one: ").lower()
         if action in ['done', 'd']:
@@ -140,9 +141,9 @@ def interactive_mode(initial_args, include_dirs=False):
             if validate_rsync_args(new_args):
                 args = new_args
             else:
-                print("Error: Invalid rsync arguments. Please try again.")
+                print("Error: Invalid rsync arguments. Please try again.", file=sys.stderr)
         else:
-            print("Invalid action. Please enter 'a', 'r', 'e', or 'd'.")
+            print("Invalid action. Please enter 'a', 'r', 'e', or 'd'.", file=stdout)
 
     return args
 

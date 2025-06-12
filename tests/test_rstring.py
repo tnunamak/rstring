@@ -84,8 +84,9 @@ def test_interactive_mode():
         mock_input.side_effect = ['a', '*.txt', 'd']
         with patch('rstring.utils.validate_rsync_args', return_value=True):
             with patch('rstring.utils.run_rsync', return_value=['file1.txt']):
-                result = utils.interactive_mode(['--include=*.py'])
-                assert result == ['--include=*.py', '--include', '*.txt']
+                with open(os.devnull, 'w') as devnull:
+                    result = utils.interactive_mode(['--include=*.py'], stdout=devnull)
+                    assert result == ['--include=*.py', '--include', '*.txt']
 
 
 def test_print_tree():
@@ -165,9 +166,10 @@ def test_main_with_default_patterns():
                 with patch('rstring.cli.copy_to_clipboard') as mock_copy:
                     with patch('rstring.cli.get_tree_string', return_value='test.py'):
                         with patch('rstring.cli.filter_ignored_files', return_value=['test.py']):
-                            with patch('sys.argv', ['rstring']):
-                                cli.main()
-                                mock_copy.assert_called_once_with(mock_gathered_code)
+                            with patch.dict(os.environ, {'RSTRING_TESTING': 'True'}):
+                                with patch('sys.argv', ['rstring']):
+                                    cli.main()
+                                    mock_copy.assert_called_once_with(mock_gathered_code)
 
 
 @patch('rstring.cli.filter_ignored_files')
@@ -192,12 +194,13 @@ def test_main_with_target_directory(mock_check_rsync, mock_get_tree_string,
             f.write('print("test")')
 
         with patch('sys.argv', ['rstring', '-C', temp_dir, '--include=*.py']):
-            with patch('os.chdir') as mock_chdir:
-                cli.main()
+            with patch.dict(os.environ, {'RSTRING_TESTING': 'True'}):
+                with patch('os.chdir') as mock_chdir:
+                    cli.main()
 
-                # Should change to target directory and back
-                assert mock_chdir.call_count == 2
-                mock_copy_to_clipboard.assert_called_once_with('test content')
+                    # Should change to target directory and back
+                    assert mock_chdir.call_count == 2
+                    mock_copy_to_clipboard.assert_called_once_with('test content')
 
 
 def test_main_with_nonexistent_directory():
@@ -206,7 +209,23 @@ def test_main_with_nonexistent_directory():
         with patch('sys.argv', ['rstring', '-C', '/nonexistent']):
             with patch('builtins.print') as mock_print:
                 cli.main()
-                mock_print.assert_called_with("Error: Directory '/nonexistent' does not exist.")
+                mock_print.assert_called_with("Error: Directory '/nonexistent' does not exist.", file=sys.stderr)
+
+
+def test_main_rsync_not_found():
+    """Test main function when rsync is not found."""
+    with patch('rstring.cli.check_rsync', return_value=False):
+        with patch('builtins.print') as mock_print:
+            cli.main()
+            mock_print.assert_called_with("Error: rsync is not installed on this system. Please install rsync and try again.", file=sys.stderr)
+
+
+def test_main_with_missing_directory_arg():
+    """Test main function with -C flag but no directory."""
+    with patch('rstring.cli.check_rsync', return_value=True):
+        with patch('sys.argv', ['rstring', '-C']):
+            with pytest.raises(SystemExit):
+                cli.main()
 
 
 def test_parse_gitignore():
