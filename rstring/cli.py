@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import sys
 
 from .utils import (
     check_rsync, run_rsync, validate_rsync_args,
@@ -57,7 +58,7 @@ def get_default_patterns():
 
 def main():
     if not check_rsync():
-        print("Error: rsync is not installed on this system. Please install rsync and try again.")
+        print("Error: rsync is not installed on this system. Please install rsync and try again.", file=sys.stderr)
         return
 
     parser = argparse.ArgumentParser(
@@ -98,12 +99,12 @@ For frequently used patterns, create shell aliases:
         else:
             target_dir, rsync_args_base = parse_target_directory(unknown_args)
     except ValueError as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
         return
 
     # Validate target directory exists
     if not os.path.isdir(target_dir):
-        print(f"Error: Directory '{target_dir}' does not exist.")
+        print(f"Error: Directory '{target_dir}' does not exist.", file=sys.stderr)
         return
 
     # Use provided patterns or conservative default
@@ -119,7 +120,7 @@ For frequently used patterns, create shell aliases:
             gitignore_patterns = parse_gitignore(gitignore_path)
             rsync_args = gitignore_patterns + rsync_args
         else:
-            print(f"Warning: No .gitignore file found in {target_dir}. Use --no-gitignore to ignore .gitignore patterns")
+            print(f"Warning: No .gitignore file found in {target_dir}. Use --no-gitignore to ignore .gitignore patterns", file=sys.stderr)
 
     # Add default source if none specified
     if not any(arg for arg in rsync_args if not arg.startswith('--')):
@@ -131,7 +132,7 @@ For frequently used patterns, create shell aliases:
         os.chdir(target_dir)
 
         if not validate_rsync_args(rsync_args):
-            print("Error: Invalid rsync arguments. Please check and try again.")
+            print("Error: Invalid rsync arguments. Please check and try again.", file=sys.stderr)
             return
 
         if args.interactive:
