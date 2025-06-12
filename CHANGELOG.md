@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/tnunamak/rstring/compare/v0.3.0...v0.4.0) (2025-06-12)
+
+
+### Features
+
+* git integration ([#9](https://github.com/tnunamak/rstring/issues/9)) ([b86b925](https://github.com/tnunamak/rstring/commit/b86b925d5ef9c3e9679a9a22015165fc7a38d3df))
+
 ## [0.3.0](https://github.com/tnunamak/rstring/compare/v0.2.0...v0.3.0) (2024-07-29)
 
 
