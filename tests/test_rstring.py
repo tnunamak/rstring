@@ -1,64 +1,26 @@
 import subprocess
 from unittest.mock import patch, MagicMock, mock_open
-
+import tempfile
 import pytest
-import yaml
+import os
+import sys
+
+# Add the parent directory to the path so we can import rstring
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from rstring import utils, cli
-
-
-@pytest.fixture
-def temp_config(tmp_path):
-    config_file = tmp_path / '.rstring.yaml'
-    config_file.touch()
-    with patch('rstring.utils.PRESETS_FILE', str(config_file)):
-        yield config_file
-    if config_file.exists():
-        config_file.unlink()
-
-
-def test_load_presets(temp_config):
-    test_preset = {'test_preset': {'args': ['--include=*.py']}}
-    temp_config.write_text(yaml.dump(test_preset))
-
-    presets = utils.load_presets()
-    assert presets == test_preset
-
-
-def test_save_presets(temp_config):
-    test_preset = {'test_preset': {'args': ['--include=*.py']}}
-    utils.save_presets(test_preset)
-
-    saved_preset = yaml.safe_load(temp_config.read_text())
-    assert saved_preset == test_preset
+from rstring.utils import (
+    check_rsync, run_rsync, validate_rsync_args,
+    gather_code, interactive_mode, get_tree_string, copy_to_clipboard,
+    parse_gitignore, is_binary
+)
+from rstring.cli import parse_target_directory, main
 
 
 def test_check_rsync():
     with patch('subprocess.run') as mock_run:
         mock_run.return_value = MagicMock(returncode=0)
         assert utils.check_rsync() == True
-
-
-def test_load_presets_invalid_yaml(temp_config):
-    temp_config.write_text('invalid: yaml: :]')
-
-    presets = utils.load_presets()
-    assert presets == {}
-
-
-def test_load_presets_file_not_found(temp_config):
-    temp_config.unlink()
-    mock_default_content = yaml.dump({'default_preset': {'args': ['--include=*.py']}})
-
-    with patch('rstring.utils.PRESETS_FILE', 'nonexistent_file'):
-        with patch('rstring.utils.DEFAULT_PRESETS_FILE', 'default_presets.yaml'):
-            with patch('builtins.open', mock_open(read_data=mock_default_content)) as mock_file:
-                presets = utils.load_presets()
-
-                assert presets == {'default_preset': {'args': ['--include=*.py']}}
-                mock_file.assert_any_call('default_presets.yaml', 'r')
-                mock_file.assert_any_call('nonexistent_file', 'w')
-                mock_file().write.assert_called_once_with(mock_default_content)
 
 
 def test_run_rsync():
@@ -122,8 +84,9 @@ def test_interactive_mode():
         mock_input.side_effect = ['a', '*.txt', 'd']
         with patch('rstring.utils.validate_rsync_args', return_value=True):
             with patch('rstring.utils.run_rsync', return_value=['file1.txt']):
-                result = utils.interactive_mode(['--include=*.py'])
-                assert result == ['--include=*.py', '--include', '*.txt']
+                with open(os.devnull, 'w') as devnull:
+                    result = utils.interactive_mode(['--include=*.py'], stdout=devnull)
+                    assert result == ['--include=*.py', '--include', '*.txt']
 
 
 def test_print_tree():
@@ -169,17 +132,137 @@ def test_copy_to_clipboard(system, command):
             assert mock_run.call_args[0][0][0] == command
 
 
-def test_main(temp_config):
-    test_args = ['rstring', '--preset', 'test_preset']
-    test_preset = {'test_preset': {'args': ['--include=*.py']}}
-    temp_config.write_text(yaml.dump(test_preset))
+def test_parse_target_directory():
+    """Test the parse_target_directory function."""
+    # Test -C flag
+    target_dir, remaining = parse_target_directory(['-C', '/tmp', '--include=*.py'])
+    assert target_dir == '/tmp'
+    assert remaining == ['--include=*.py']
 
+    # Test --directory flag
+    target_dir, remaining = parse_target_directory(['--directory', '/home', '--include=*.js'])
+    assert target_dir == '/home'
+    assert remaining == ['--include=*.js']
+
+    # Test positional argument
+    with tempfile.TemporaryDirectory() as temp_dir:
+        target_dir, remaining = parse_target_directory([temp_dir, '--include=*.py'])
+        assert target_dir == temp_dir
+        assert remaining == ['--include=*.py']
+
+    # Test default to current directory
+    target_dir, remaining = parse_target_directory(['--include=*.py'])
+    assert target_dir == os.path.abspath('.')
+    assert remaining == ['--include=*.py']
+
+
+def test_main_with_default_patterns():
+    """Test main function with default patterns (no user args)."""
     mock_gathered_code = 'print("Hello")\n' * 26
 
-    with patch('sys.argv', test_args):
-        with patch('rstring.utils.check_rsync', return_value=True):
+    with patch('rstring.cli.check_rsync', return_value=True):
+        with patch('rstring.cli.run_rsync', return_value=['test.py']):
             with patch('rstring.cli.gather_code', return_value=mock_gathered_code):
                 with patch('rstring.cli.copy_to_clipboard') as mock_copy:
+                    with patch('rstring.cli.get_tree_string', return_value='test.py'):
+                        with patch('rstring.cli.filter_ignored_files', return_value=['test.py']):
+                            with patch.dict(os.environ, {'RSTRING_TESTING': 'True'}):
+                                with patch('sys.argv', ['rstring']):
+                                    cli.main()
+                                    mock_copy.assert_called_once_with(mock_gathered_code)
+
+
+@patch('rstring.cli.filter_ignored_files')
+@patch('rstring.cli.run_rsync')
+@patch('rstring.cli.gather_code')
+@patch('rstring.cli.copy_to_clipboard')
+@patch('rstring.cli.get_tree_string')
+@patch('rstring.cli.check_rsync')
+def test_main_with_target_directory(mock_check_rsync, mock_get_tree_string,
+                                   mock_copy_to_clipboard, mock_gather_code, mock_run_rsync, mock_filter_ignored):
+    """Test main function with target directory functionality."""
+    mock_check_rsync.return_value = True
+    mock_run_rsync.return_value = ['test.py']
+    mock_gather_code.return_value = 'test content'
+    mock_get_tree_string.return_value = 'tree'
+    mock_filter_ignored.return_value = ['test.py']
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create a test file
+        test_file = os.path.join(temp_dir, 'test.py')
+        with open(test_file, 'w') as f:
+            f.write('print("test")')
+
+        with patch('sys.argv', ['rstring', '-C', temp_dir, '--include=*.py']):
+            with patch.dict(os.environ, {'RSTRING_TESTING': 'True'}):
+                with patch('os.chdir') as mock_chdir:
                     cli.main()
-                    mock_copy.assert_called_once()
-                    mock_copy.assert_called_with(mock_gathered_code)
+
+                    # Should change to target directory and back
+                    assert mock_chdir.call_count == 2
+                    mock_copy_to_clipboard.assert_called_once_with('test content')
+
+
+def test_main_with_nonexistent_directory():
+    """Test main function with non-existent directory."""
+    with patch('rstring.cli.check_rsync', return_value=True):
+        with patch('sys.argv', ['rstring', '-C', '/nonexistent']):
+            with patch('builtins.print') as mock_print:
+                cli.main()
+                mock_print.assert_called_with("Error: Directory '/nonexistent' does not exist.", file=sys.stderr)
+
+
+def test_main_rsync_not_found():
+    """Test main function when rsync is not found."""
+    with patch('rstring.cli.check_rsync', return_value=False):
+        with patch('builtins.print') as mock_print:
+            cli.main()
+            mock_print.assert_called_with("Error: rsync is not installed on this system. Please install rsync and try again.", file=sys.stderr)
+
+
+def test_main_with_missing_directory_arg():
+    """Test main function with -C flag but no directory."""
+    with patch('rstring.cli.check_rsync', return_value=True):
+        with patch('sys.argv', ['rstring', '-C']):
+            with pytest.raises(SystemExit):
+                cli.main()
+
+
+def test_parse_gitignore():
+    """Test gitignore parsing functionality."""
+    gitignore_content = """
+# Comment
+__pycache__/
+*.pyc
+/build
+node_modules/
+.env
+"""
+
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.gitignore') as f:
+        f.write(gitignore_content)
+        f.flush()
+
+        patterns = parse_gitignore(f.name)
+
+        expected_patterns = [
+            '--exclude=.git',
+            '--exclude=__pycache__/*',
+            '--exclude=*.pyc',
+            '--exclude=build',
+            '--exclude=node_modules/*',
+            '--exclude=.env'
+        ]
+
+        assert patterns == expected_patterns
+
+        # Clean up
+        os.unlink(f.name)
+
+
+def test_get_default_patterns():
+    """Test the get_default_patterns function."""
+    from rstring.cli import get_default_patterns
+
+    patterns = get_default_patterns()
+    assert patterns == ['--include=*/']

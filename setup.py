@@ -8,7 +8,7 @@ setup(
     version="0.3.0",
     author="Tim Nunamaker",
     author_email="tim.nunamaker@gmail.com",
-    description="A tool to stringify code using rsync and manage presets",
+    description="A tool to stringify code using rsync filtering",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/tnunamak/rstring",
@@ -36,13 +36,12 @@ setup(
     },
     install_requires=[
         "colorama>=0.4.6",
-        "pyyaml>=6.0.1",
     ],
     extras_require={
-        'dev': ['pytest>=8.3.2'],
-    },
-    package_data={
-        "rstring": ["default_presets.yaml"],
+        'dev': [
+            'pytest>=8.3.2',
+            'hypothesis>=6.108.5',
+        ]
     },
     include_package_data=True,
 )
