@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/tnunamak/rstring/compare/v0.4.0...v0.4.1) (2025-06-13)
+
+
+### Bug Fixes
+
+* broken pypi publish ([#11](https://github.com/tnunamak/rstring/issues/11)) ([71bb2ab](https://github.com/tnunamak/rstring/commit/71bb2ab72ad4a44c335f16bac6702b6f03f6e41c))
+
 ## [0.4.0](https://github.com/tnunamak/rstring/compare/v0.3.0...v0.4.0) (2025-06-12)
 
 
