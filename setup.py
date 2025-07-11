@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="rstring",
-    version="0.4.1",
+    version="0.4.2",
     author="Tim Nunamaker",
     author_email="tim.nunamaker@gmail.com",
     description="A tool to stringify code using rsync filtering",
