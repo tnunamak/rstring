@@ -266,3 +266,33 @@ def test_get_default_patterns():
 
     patterns = get_default_patterns()
     assert patterns == ['--include=*/']
+
+
+def test_no_gitignore_flag_skips_git_filtering():
+    """Test that --no-gitignore flag skips git filtering, preventing regression of the bug where git filtering was applied regardless of the flag."""
+    with patch('rstring.cli.check_rsync', return_value=True):
+        with patch('rstring.cli.run_rsync', return_value=['test.py']):
+            with patch('rstring.cli.filter_ignored_files') as mock_filter:
+                with patch('rstring.cli.gather_code', return_value='test content'):
+                    with patch('rstring.cli.copy_to_clipboard'):
+                        with patch('rstring.cli.get_tree_string', return_value='test.py'):
+                            with patch.dict(os.environ, {'RSTRING_TESTING': 'True'}):
+                                with patch('sys.argv', ['rstring', '--no-gitignore']):
+                                    cli.main()
+                                    # Should not call filter_ignored_files when --no-gitignore is used
+                                    mock_filter.assert_not_called()
+
+
+def test_default_behavior_applies_git_filtering():
+    """Test that default behavior (without --no-gitignore) applies git filtering."""
+    with patch('rstring.cli.check_rsync', return_value=True):
+        with patch('rstring.cli.run_rsync', return_value=['test.py']):
+            with patch('rstring.cli.filter_ignored_files', return_value=['test.py']) as mock_filter:
+                with patch('rstring.cli.gather_code', return_value='test content'):
+                    with patch('rstring.cli.copy_to_clipboard'):
+                        with patch('rstring.cli.get_tree_string', return_value='test.py'):
+                            with patch.dict(os.environ, {'RSTRING_TESTING': 'True'}):
+                                with patch('sys.argv', ['rstring']):
+                                    cli.main()
+                                    # Should call filter_ignored_files when --no-gitignore is not used
+                                    mock_filter.assert_called_once()

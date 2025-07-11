@@ -140,11 +140,12 @@ For frequently used patterns, create shell aliases:
 
         file_list = run_rsync(rsync_args)
 
-        # Apply git filtering if in a git repository
-        try:
-            file_list = filter_ignored_files(target_dir, file_list)
-        except Exception as e:
-            logger.warning(f"Git filtering failed: {e}")
+        # Apply git filtering if in a git repository and gitignore is enabled
+        if args.use_gitignore:
+            try:
+                file_list = filter_ignored_files(target_dir, file_list)
+            except Exception as e:
+                logger.warning(f"Git filtering failed: {e}")
 
         result = gather_code(file_list, args.preview_length, args.include_dirs)
 
