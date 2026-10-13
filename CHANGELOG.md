@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/tnunamak/rstring/compare/v0.4.1...v0.4.2) (2025-07-11)
+
+
+### Bug Fixes
+
+* honor --no-gitignore flag for git filtering ([#13](https://github.com/tnunamak/rstring/issues/13)) ([438397c](https://github.com/tnunamak/rstring/commit/438397ca3ce06bd1abd763fad1048f18f3bef41e))
+
 ## [0.4.1](https://github.com/tnunamak/rstring/compare/v0.4.0...v0.4.1) (2025-06-13)
 
 
